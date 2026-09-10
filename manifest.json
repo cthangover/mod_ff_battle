@@ -1,0 +1,11 @@
+{
+  "id": "ff_battle",
+  "name": "FFBattle",
+  "version": "1.0.0",
+  "author": "ct",
+  "description": "Final Fantasy style battle system",
+  "sources": [
+    "src/**/*.cs"
+  ],
+  "depends": [ "core>=1", "interface>=1" ]
+}

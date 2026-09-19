@@ -23,7 +23,7 @@ namespace Cthangover.FFBattle
     /// <see cref="FFBattleController"/> for UI interaction. Registered via
     /// <see cref="IBattleCore.Id"/> as <c>"ff_battle"</c>.
     /// </summary>
-    public class FFBattleCore : IBattleCore
+    public class FFBattleCore : IBattleCore, IBattleAutoPlayable
     {
         /// <summary>Unique identifier for this battle system implementation, used by the core engine to locate it.</summary>
         public string Id => "ff_battle";
@@ -854,5 +854,17 @@ namespace Cthangover.FFBattle
             if (_endTurnButton != null)
                 _endTurnButton.Visible = false;
         }
+
+        /// <summary>
+        /// <c>true</c> while the core accepts a player turn advance; flips to
+        /// <c>false</c> synchronously at the start of <see cref="OnPlayerTurnEnd"/>.
+        /// </summary>
+        public bool IsWaitingForPlayerInput => _isPlayerTurn;
+
+        /// <summary>
+        /// Automation hook: ends the player's turn through the same path the
+        /// end-turn button uses.
+        /// </summary>
+        public void AdvancePlayerTurn() => OnPlayerTurnEnd();
     }
 }

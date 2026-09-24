@@ -4,8 +4,9 @@
   "version": "1.0.0",
   "author": "ct",
   "description": "Final Fantasy style battle system",
+  "category": "gameplay",
   "sources": [
     "src/**/*.cs"
   ],
-  "depends": [ "core>=1", "interface>=1", "turn_battle>=1" ]
+  "depends": [ "core>=1", "interface>=1", "turn_battle_base>=1" ]
 }

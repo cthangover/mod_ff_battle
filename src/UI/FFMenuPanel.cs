@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Cthangover.Core.UI;
+using Cthangover.Core.UI.Theming;
 using Godot;
 
 namespace Cthangover.FFBattle.UI
@@ -36,7 +37,7 @@ namespace Cthangover.FFBattle.UI
     public partial class FFMenuPanel : ModWidget
     {
         private ColorRect _background;
-        private ColorRect _border;
+        private Panel _border;
         private Label _cursorLabel;
         private List<Label> _itemLabels = new();
         private Tween _cursorTween;
@@ -74,9 +75,17 @@ namespace Cthangover.FFBattle.UI
 
         protected override void Construct()
         {
+            CthangoverTheme.Apply(this);
+
             _background = GetNode<ColorRect>("Background");
-            _border = GetNode<ColorRect>("Border");
+            _background.Color = UiTokens.Surface2;
+
+            _border = GetNode<Panel>("Border");
+            _border.AddThemeStyleboxOverride("panel",
+                UiKit.Frame(UiTokens.RadiusSm, UiTokens.Alpha(UiTokens.White, 0f), UiTokens.AccentLine, 2));
+
             _cursorLabel = GetNode<Label>("Cursor");
+            _cursorLabel.AddThemeColorOverride("font_color", UiTokens.AccentBright);
 
             GuiInput += OnPanelGuiInput;
         }
@@ -101,8 +110,8 @@ namespace Cthangover.FFBattle.UI
                 label.Text = entries[i].Label;
                 label.AddThemeFontSizeOverride("font_size", 17);
                 label.AddThemeColorOverride("font_color", entries[i].Enabled
-                    ? new Color(1f, 1f, 1f, 1f)
-                    : new Color(0.5f, 0.5f, 0.5f, 1f));
+                    ? UiTokens.Ink
+                    : UiTokens.Faint);
                 label.MouseFilter = MouseFilterEnum.Stop;
                 label.Position = new Vector2(PADDING + 24, PADDING + i * ITEM_HEIGHT + CURSOR_OFFSET_Y);
                 label.Size = new Vector2(width - PADDING * 2 - 24, ITEM_HEIGHT);

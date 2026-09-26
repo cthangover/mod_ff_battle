@@ -4,6 +4,7 @@ using System.Linq;
 using Cthangover.Core.Characters;
 using Cthangover.Core.Scenes;
 using Cthangover.Core.UI;
+using Cthangover.Core.UI.Theming;
 using Godot;
 
 namespace Cthangover.FFBattle.UI
@@ -32,7 +33,10 @@ namespace Cthangover.FFBattle.UI
         /// <summary>Raised when an enemy widget is clicked (used for target selection).</summary>
         public event System.Action<FFCharacterWidget> OnEnemyClicked;
 
-        protected override void Construct() { }
+        protected override void Construct()
+        {
+            CthangoverTheme.Apply(this);
+        }
 
         /// <summary>Number of enemy widget instances currently managed (including dead).</summary>
         public int EnemyCount => Widgets.Count;

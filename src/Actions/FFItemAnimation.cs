@@ -1,6 +1,7 @@
-using Cthangover.Core.Characters;
+﻿using Cthangover.Core.Characters;
 using Cthangover.Core.Items;
 using Cthangover.FFBattle.UI;
+using Cthangover.Core.UI.Theming;
 using Godot;
 
 namespace Cthangover.FFBattle.Actions
@@ -84,7 +85,7 @@ namespace Cthangover.FFBattle.Actions
                         var localTarget = Target.GlobalPosition - Source.Position;
                         var iconStart = Source.GlobalPosition - Source.Position + new Vector2(20, -70);
                         _itemIcon.Position = iconStart.Lerp(localTarget + new Vector2(20, -20), EaseInOutQuad(progress));
-                        _itemIcon.Modulate = new Color(1, 1, 1, 1f - progress * 0.5f);
+                        _itemIcon.Modulate = UiTokens.Alpha(UiTokens.White, 1f - progress * 0.5f);
                     }
 
                     if (!_effectApplied && progress >= 0.3f)
@@ -96,7 +97,7 @@ namespace Cthangover.FFBattle.Actions
 
                         Source.UpdateInfo();
                         Target.UpdateInfo();
-                        Target.Flash(new Color(0.5f, 1f, 0.5f, 1f), 0.3f);
+                        Target.Flash(UiTokens.Success, 0.3f);
                     }
 
                     if (progress >= 1f)
@@ -139,3 +140,5 @@ namespace Cthangover.FFBattle.Actions
         }
     }
 }
+
+

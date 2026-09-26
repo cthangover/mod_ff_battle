@@ -3,6 +3,7 @@ using Cthangover.Core.Mods;
 using Cthangover.Core.Mods.Resolvers;
 using Cthangover.Core.Characters;
 using Cthangover.Core.UI;
+using Cthangover.Core.UI.Theming;
 using Godot;
 
 namespace Cthangover.FFBattle.UI
@@ -40,6 +41,8 @@ namespace Cthangover.FFBattle.UI
 
         protected override void Construct()
         {
+            CthangoverTheme.Apply(this);
+
             _sprite = GetNode<TextureRect>("Sprite");
             _hpBg = GetNode<ColorRect>("HpBg");
             _hpFill = GetNode<ColorRect>("HpFill");
@@ -58,7 +61,7 @@ namespace Cthangover.FFBattle.UI
                 _selection.Texture = _cachedSelectTex;
                 _selection.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
                 _selection.StretchMode = TextureRect.StretchModeEnum.Scale;
-                _selection.Modulate = new Color(0, 0, 0, 0);
+                _selection.Modulate = UiTokens.Alpha(UiTokens.White, 0f);
             }
         }
 
@@ -93,11 +96,11 @@ namespace Cthangover.FFBattle.UI
             _hpFill.Size = new Vector2((Size.X - 8) * hpPercent, 18);
 
             if (hpPercent > 0.5f)
-                _hpFill.Color = new Color(0.1f, 0.85f, 0.1f, 1f);
+                _hpFill.Color = UiTokens.HpOk;
             else if (hpPercent > 0.25f)
-                _hpFill.Color = new Color(0.85f, 0.85f, 0.1f, 1f);
+                _hpFill.Color = UiTokens.Warning;
             else
-                _hpFill.Color = new Color(0.85f, 0.1f, 0.1f, 1f);
+                _hpFill.Color = UiTokens.HpLow;
         }
 
         /// <summary>Shows a coloured selection overlay with a 0.15s tween fade-in. Used for target highlighting and selection indication.</summary>
@@ -121,7 +124,7 @@ namespace Cthangover.FFBattle.UI
             _animTween?.Kill();
             _animTween = CreateTween();
             _animTween.SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Quad);
-            _animTween.TweenProperty(_selection, "modulate", new Color(0, 0, 0, 0), 0.15f);
+            _animTween.TweenProperty(_selection, "modulate", UiTokens.Alpha(UiTokens.White, 0f), 0.15f);
         }
 
         /// <summary>Rapidly oscillates the widget's position with random offsets (6 iterations) to simulate impact feedback.</summary>

@@ -3,6 +3,7 @@ using System.Linq;
 using Cthangover.Core.Characters;
 using Cthangover.Core.Scenes;
 using Cthangover.Core.UI;
+using Cthangover.Core.UI.Theming;
 using Godot;
 
 namespace Cthangover.FFBattle.UI
@@ -25,7 +26,10 @@ namespace Cthangover.FFBattle.UI
         /// <summary>Raised when a player widget is clicked — routed to <see cref="FFBattleCore"/> for character selection.</summary>
         public event System.Action<FFCharacterWidget> OnWidgetClicked;
 
-        protected override void Construct() { }
+        protected override void Construct()
+        {
+            CthangoverTheme.Apply(this);
+        }
 
         /// <summary>
         /// Creates <see cref="FFCharacterWidget"/> instances for each player, scales

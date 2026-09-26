@@ -1,8 +1,9 @@
-using Cthangover.Core.Battle;
+﻿using Cthangover.Core.Battle;
 using Cthangover.Core.Battle.Actions;
 using Cthangover.Core.Characters;
 using Cthangover.TurnBattle;
 using Cthangover.FFBattle.UI;
+using Cthangover.Core.UI.Theming;
 using Godot;
 
 namespace Cthangover.FFBattle.Actions
@@ -70,7 +71,7 @@ namespace Cthangover.FFBattle.Actions
 
                         if (result.Result)
                         {
-                            Target.Flash(new Color(1f, 0.3f, 0.3f, 1f), 0.2f);
+                            Target.Flash(UiTokens.Danger, 0.2f);
                             Target.Shake(4f, 0.25f);
 
                             if (result.Target.Damage > 0)
@@ -115,3 +116,4 @@ namespace Cthangover.FFBattle.Actions
         }
     }
 }
+

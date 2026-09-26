@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,6 +10,7 @@ using Cthangover.Core.Settings;
 using Cthangover.Core.Scenes;
 using Cthangover.Core.Utils;
 using Cthangover.FFBattle.UI;
+using Cthangover.Core.UI.Theming;
 using Godot;
 
 namespace Cthangover.FFBattle
@@ -254,7 +255,7 @@ namespace Cthangover.FFBattle
 
             foreach (var widget in _playerPanel.Widgets)
                 widget.ClearHighlight();
-            _currentCharacter?.Highlight(new Color(0, 0.6f, 1f, 0.6f));
+            _currentCharacter?.Highlight(UiTokens.Alpha(UiTokens.Info, 0.6f));
         }
 
         private void OnMenuItemSelected(int index)
@@ -427,13 +428,13 @@ namespace Cthangover.FFBattle
             {
                 foreach (var widget in _playerPanel.Widgets)
                     if (!widget.IsDead)
-                        widget.Highlight(new Color(0.3f, 1f, 0.3f, 0.5f));
+                        widget.Highlight(UiTokens.Alpha(UiTokens.Success, 0.5f));
             }
             else
             {
                 foreach (var widget in _enemyPanel.Widgets)
                     if (!widget.IsDead)
-                        widget.Highlight(new Color(1f, 0.3f, 0.3f, 0.5f));
+                        widget.Highlight(UiTokens.Alpha(UiTokens.Danger, 0.5f));
             }
 
             _onTargetSelected = null;
@@ -868,3 +869,6 @@ namespace Cthangover.FFBattle
         public void AdvancePlayerTurn() => OnPlayerTurnEnd();
     }
 }
+
+
+

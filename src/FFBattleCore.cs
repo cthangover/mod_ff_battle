@@ -4,10 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using Cthangover.Core.Battle;
 using Cthangover.Core.Battle.Actions;
+using Cthangover.Core.Cards.StatusEffect;
 using Cthangover.Core.Characters;
 using Cthangover.Core.Items;
 using Cthangover.Core.Settings;
 using Cthangover.Core.Scenes;
+using Cthangover.Core.UI;
+using Cthangover.Core.UI.CharacterPanel;
 using Cthangover.Core.Utils;
 using Cthangover.FFBattle.UI;
 using Cthangover.Core.UI.Theming;
@@ -38,6 +41,11 @@ namespace Cthangover.FFBattle
         private FFPlayerPanel _playerPanel;
         private FFEnemyPanel _enemyPanel;
         private FFMenuPanel _menuPanel;
+        private FFActionDetailPanel _detailPanel;
+        private FFBattleHud _hud;
+        private FFBattleLogPanel _logPanel;
+        private FFBattleBanner _banner;
+        private FFBattleTargetHint _targetHint;
         private FFBattleController _controller;
         private Control _toolPanel;
 
@@ -49,6 +57,12 @@ namespace Cthangover.FFBattle
         private bool _targetSelectMode;
         private bool _targetAlly;
         private System.Action<FFCharacterWidget> _onTargetSelected;
+        private int _round;
+        private int _detailKind;
+
+        private const int DetailMain = 0;
+        private const int DetailActions = 1;
+        private const int DetailItems = 2;
 
         private const float PLAYER_SCALE = 0.85f;
 
@@ -91,6 +105,33 @@ namespace Cthangover.FFBattle
             _menuPanel.HideMenu();
             panel.AddChild(_menuPanel);
 
+            _detailPanel = (FFActionDetailPanel)TscnScenes.LoadAndBuild("scenes/ff_action_detail_panel.tscn");
+            _detailPanel.Name = "FFActionDetailPanel";
+            _detailPanel.EnsureConstructed();
+            _detailPanel.HidePassport();
+            panel.AddChild(_detailPanel);
+
+            _hud = (FFBattleHud)TscnScenes.LoadAndBuild("scenes/ff_battle_hud.tscn");
+            _hud.Name = "FFBattleHud";
+            _hud.EnsureConstructed();
+            panel.AddChild(_hud);
+
+            _logPanel = (FFBattleLogPanel)TscnScenes.LoadAndBuild("scenes/ff_battle_log_panel.tscn");
+            _logPanel.Name = "FFBattleLogPanel";
+            _logPanel.EnsureConstructed();
+            panel.AddChild(_logPanel);
+
+            _banner = (FFBattleBanner)TscnScenes.LoadAndBuild("scenes/ff_battle_banner.tscn");
+            _banner.Name = "FFBattleBanner";
+            _banner.EnsureConstructed();
+            panel.AddChild(_banner);
+
+            _targetHint = (FFBattleTargetHint)TscnScenes.LoadAndBuild("scenes/ff_battle_target_hint.tscn");
+            _targetHint.Name = "FFBattleTargetHint";
+            _targetHint.EnsureConstructed();
+            _targetHint.HideHint();
+            panel.AddChild(_targetHint);
+
             _endTurnButton = new Button();
             _endTurnButton.Text = TranslationServer.Translate("ff_battle/end_turn");
             _endTurnButton.Pressed += OnEndTurnPressed;
@@ -112,6 +153,7 @@ namespace Cthangover.FFBattle
             _enemyPanel.OnEnemyClicked += OnEnemyClicked;
             _enemyPanel.OnEnemyDead += OnEnemyDied;
             _menuPanel.OnItemSelected += OnMenuItemSelected;
+            _menuPanel.OnSelectionChanged += OnMenuSelectionChanged;
             _menuPanel.OnCancelled += OnMenuCancel;
         }
 
@@ -138,6 +180,20 @@ namespace Cthangover.FFBattle
             _menuPanel.Position = new Vector2(viewportSize.X * 0.66f, viewportSize.Y * 0.58f);
             _menuPanel.Size = new Vector2(viewportSize.X * 0.3f, 160f);
 
+            _detailPanel.Position = new Vector2(viewportSize.X * 0.66f - 320f, viewportSize.Y * 0.58f);
+            _detailPanel.Size = new Vector2(300f, 190f);
+
+            _hud.Position = new Vector2(26f, 20f);
+
+            _logPanel.Position = new Vector2(viewportSize.X - 466f, 64f);
+            _logPanel.Size = new Vector2(440f, 440f);
+
+            _banner.Position = new Vector2(0f, viewportSize.Y * 0.43f);
+            _banner.Size = new Vector2(viewportSize.X, 70f);
+
+            _targetHint.Position = new Vector2(0f, viewportSize.Y * 0.48f);
+            _targetHint.Size = new Vector2(viewportSize.X, 40f);
+
             if (_endTurnButton != null)
                 _endTurnButton.Position = new Vector2(viewportSize.X - 180f, viewportSize.Y * 0.92f);
 
@@ -147,6 +203,9 @@ namespace Cthangover.FFBattle
             BattleSceneContext.Instance.OnBattleCleared += OnBattleCleared;
 
             _isPlayerTurn = true;
+            _round = 0;
+            UpdateHud();
+            _logPanel.AddEntry(Translate("ff_battle/log_battle_start"), FFBattleLogKind.Turn);
             StartPlayerTurn();
         }
 
@@ -160,13 +219,15 @@ namespace Cthangover.FFBattle
             _currentCharacter = null;
             _targetSelectMode = false;
             _menuPanel.HideMenu();
+            _detailPanel.HidePassport();
+            _targetHint.HideHint();
             BattleSceneContext.Instance.ActiveCharacter = null;
 
             foreach (var widget in _playerPanel.Widgets)
             {
                 if (!widget.IsDead)
                 {
-                    widget.Card.StatusEffectQueue.OnTurnStart();
+                    StatusEffectService.Of(widget.Card).OnTurnStart();
                     widget.Card.Attributes.Point.Value = widget.Card.Attributes.Point.BaseValue;
                 }
                 widget.UpdateInfo();
@@ -180,6 +241,13 @@ namespace Cthangover.FFBattle
 
             foreach (var widget in _playerPanel.Widgets)
                 widget.ClearHighlight();
+
+            _round += 1;
+            UpdateHud();
+            _hud.SetPhase(true);
+            _banner.Show(Translate("ff_battle/banner_player"));
+            _logPanel.SetRound(_round);
+            _logPanel.AddEntry(string.Format(Translate("ff_battle/log_turn_player"), _round), FFBattleLogKind.Turn);
         }
 
         private void OnWidgetClicked(FFCharacterWidget widget)
@@ -201,6 +269,7 @@ namespace Cthangover.FFBattle
                 _targetSelectMode = false;
                 foreach (var w in _enemyPanel.Widgets) w.ClearHighlight();
                 foreach (var w in _playerPanel.Widgets) w.ClearHighlight();
+                _targetHint.HideHint();
 
                 ExecuteMenuAction(widget);
                 return;
@@ -250,12 +319,14 @@ namespace Cthangover.FFBattle
             };
 
             _currentMenuAction = null;
-            _menuPanel.ShowMenu(entries);
+            _detailKind = DetailMain;
+            _menuPanel.ShowMenu(entries, string.Format(Translate("ff_battle/menu_caption"),
+                ActorName(), _currentCharacter.Card.Attributes.Point.Value, _currentCharacter.Card.Attributes.Point.BaseValue));
             _controller.State = FFBattleState.MenuOpen;
 
             foreach (var widget in _playerPanel.Widgets)
                 widget.ClearHighlight();
-            _currentCharacter?.Highlight(UiTokens.Alpha(UiTokens.Info, 0.6f));
+            _currentCharacter?.Highlight(UiTokens.Accent);
         }
 
         private void OnMenuItemSelected(int index)
@@ -367,7 +438,8 @@ namespace Cthangover.FFBattle
                 Enabled = true
             });
 
-            _menuPanel.ShowMenu(entries);
+            _detailKind = DetailActions;
+            _menuPanel.ShowMenu(entries, ActorName() + " · " + Translate("ff_battle/menu_actions"));
             _controller.State = FFBattleState.SubMenuOpen;
         }
 
@@ -408,7 +480,8 @@ namespace Cthangover.FFBattle
                 Enabled = true
             });
 
-            _menuPanel.ShowMenu(entries);
+            _detailKind = DetailItems;
+            _menuPanel.ShowMenu(entries, ActorName() + " · " + Translate("ff_battle/menu_items"));
             _controller.State = FFBattleState.SubMenuOpen;
         }
 
@@ -418,6 +491,7 @@ namespace Cthangover.FFBattle
             _targetAlly = targetAlly;
             _menuPanel.HideMenu();
             _controller.State = FFBattleState.TargetSelect;
+            _targetHint.ShowHint(Translate(targetAlly ? "ff_battle/hint_ally" : "ff_battle/hint_target"));
 
             foreach (var widget in _playerPanel.Widgets)
                 widget.ClearHighlight();
@@ -428,13 +502,13 @@ namespace Cthangover.FFBattle
             {
                 foreach (var widget in _playerPanel.Widgets)
                     if (!widget.IsDead)
-                        widget.Highlight(UiTokens.Alpha(UiTokens.Success, 0.5f));
+                        widget.Highlight(UiTokens.Success);
             }
             else
             {
                 foreach (var widget in _enemyPanel.Widgets)
                     if (!widget.IsDead)
-                        widget.Highlight(UiTokens.Alpha(UiTokens.Danger, 0.5f));
+                        widget.Highlight(UiTokens.Danger);
             }
 
             _onTargetSelected = null;
@@ -451,6 +525,7 @@ namespace Cthangover.FFBattle
             _targetSelectMode = false;
             foreach (var w in _enemyPanel.Widgets) w.ClearHighlight();
             foreach (var w in _playerPanel.Widgets) w.ClearHighlight();
+            _targetHint.HideHint();
 
             ExecuteMenuAction(widget);
         }
@@ -469,6 +544,7 @@ namespace Cthangover.FFBattle
             _targetSelectMode = false;
             foreach (var w in _enemyPanel.Widgets) w.ClearHighlight();
             foreach (var w in _playerPanel.Widgets) w.ClearHighlight();
+            _targetHint.HideHint();
 
             ExecuteMenuAction(widget);
         }
@@ -480,12 +556,22 @@ namespace Cthangover.FFBattle
 
             _controller.State = FFBattleState.AnimationPlaying;
             _endTurnButton.Visible = false;
+            _detailPanel.HidePassport();
+            _targetHint.HideHint();
+
+            var source = _currentCharacter;
+            var actionName = string.Empty;
+            var hpBefore = target.Card.Attributes.Health.Value;
+            var defBefore = target.Card.Attributes.Defence.Value;
+            var stunBefore = CountStunTurns(target.Card);
 
             switch (_currentMenuAction.Key)
             {
                 case "action":
                 {
                     var action = _currentMenuAction.Data as ActionCharacter;
+                    actionName = TranslationServer.Translate(action.Name).ToString();
+                    LogActionDeclared(source, actionName, target);
                     IBattleAction anim = null;
 
                     if (action.Type == ActionCharacterType.ToEnemy)
@@ -504,12 +590,16 @@ namespace Cthangover.FFBattle
                 case "item":
                 {
                     var item = _currentMenuAction.Data as IItem;
+                    actionName = TranslationServer.Translate(item.Name).ToString();
+                    LogActionDeclared(source, actionName, target);
                     var dummyAction = new ActionCharacter { ID = "ff/item" };
                     var anim = new Actions.FFItemAnimation(_currentCharacter, target, dummyAction, item);
                     await RunAnimation(anim);
                     break;
                 }
             }
+
+            LogOutcome(source, target, actionName, hpBefore, defBefore, stunBefore);
 
             _currentMenuAction = null;
             _endTurnButton.Visible = true;
@@ -537,12 +627,15 @@ namespace Cthangover.FFBattle
         private void DoEscapeAction()
         {
             _menuPanel.HideMenu();
+            _detailPanel.HidePassport();
             _controller.State = FFBattleState.Idle;
 
             var escapeRoll = (float)GD.RandRange(0, 100);
             if (escapeRoll < 70f)
             {
                 GameLogger.Log("FF_BATTLE", "Escape succeeded", LogLevel.Debug);
+                _banner.Show(Translate("ff_battle/escape_success"));
+                _logPanel.AddEntry(Translate("ff_battle/log_escape_success"), FFBattleLogKind.Turn);
                 _ctx.EndBattle(BattleSide.Player);
             }
             else
@@ -550,6 +643,8 @@ namespace Cthangover.FFBattle
                 GameLogger.Log("FF_BATTLE", "Escape failed", LogLevel.Debug);
                 _currentCharacter.Card.Attributes.Point.Value -= 1;
                 _currentCharacter.UpdateInfo();
+                _banner.Show(Translate("ff_battle/escape_fail"));
+                _logPanel.AddEntry(string.Format(Translate("ff_battle/log_escape_failed"), NameOf(_currentCharacter)), FFBattleLogKind.Status);
                 _currentCharacter = null;
                 BattleSceneContext.Instance.ActiveCharacter = null;
                 TryNextCharacterOrEndTurn();
@@ -588,6 +683,7 @@ namespace Cthangover.FFBattle
                 _targetSelectMode = false;
                 foreach (var w in _enemyPanel.Widgets) w.ClearHighlight();
                 foreach (var w in _playerPanel.Widgets) w.ClearHighlight();
+                _targetHint.HideHint();
                 ShowMainMenu();
                 return;
             }
@@ -599,6 +695,7 @@ namespace Cthangover.FFBattle
             }
 
             _menuPanel.HideMenu();
+            _detailPanel.HidePassport();
             _controller.State = FFBattleState.Idle;
             _currentCharacter = null;
             _currentMenuAction = null;
@@ -635,11 +732,12 @@ namespace Cthangover.FFBattle
                 if (widget.IsDead || widget.Card?.Attributes?.Point?.Value <= 0)
                     continue;
 
-                if (widget.Card.StatusEffectQueue.HasStun())
+                if (StatusEffectService.Of(widget.Card).HasStun())
                 {
                     GameLogger.Log("FF_BATTLE", $"{widget.Card.Name} is stunned, skipping", LogLevel.Debug);
                     widget.Card.Attributes.Point.Value = 0;
                     widget.UpdateInfo();
+                    _logPanel.AddEntry(string.Format(Translate("ff_battle/log_stun_skip"), NameOf(widget)), FFBattleLogKind.Status);
                     continue;
                 }
 
@@ -649,6 +747,7 @@ namespace Cthangover.FFBattle
                 return;
             }
 
+            _logPanel.AddEntry(Translate("ff_battle/log_no_points"), FFBattleLogKind.Info);
             OnPlayerTurnEnd();
         }
 
@@ -668,6 +767,8 @@ namespace Cthangover.FFBattle
             _isPlayerTurn = false;
             _endTurnButton.Visible = false;
             _menuPanel.HideMenu();
+            _detailPanel.HidePassport();
+            _targetHint.HideHint();
             _controller.State = FFBattleState.AnimationPlaying;
             BattleSceneContext.Instance.IsWait = true;
 
@@ -675,6 +776,10 @@ namespace Cthangover.FFBattle
                 widget.ClearHighlight();
             foreach (var widget in _enemyPanel.Widgets)
                 widget.ClearHighlight();
+
+            _hud.SetPhase(false);
+            _banner.Show(Translate("ff_battle/banner_enemy"));
+            _logPanel.AddEntry(string.Format(Translate("ff_battle/log_turn_enemy"), _round), FFBattleLogKind.Turn);
 
             var root = (Node)_ctx.RootNode;
             await root.ToSignal(root.GetTree(), "process_frame");
@@ -694,11 +799,13 @@ namespace Cthangover.FFBattle
                 if (enemyWidget.IsDead || enemyWidget.Card?.Actions == null || enemyWidget.Card.Actions.Count == 0)
                     continue;
 
-                enemyWidget.Card.StatusEffectQueue.OnTurnStart();
+                StatusEffectService.Of(enemyWidget.Card).OnTurnStart();
+                enemyWidget.UpdateInfo();
 
-                if (enemyWidget.Card.StatusEffectQueue.HasStun())
+                if (StatusEffectService.Of(enemyWidget.Card).HasStun())
                 {
                     GameLogger.Log("FF_BATTLE", $"{enemyWidget.Card.Name} is stunned, skipping", LogLevel.Debug);
+                    _logPanel.AddEntry(string.Format(Translate("ff_battle/log_stun_skip"), NameOf(enemyWidget)), FFBattleLogKind.Status);
                     continue;
                 }
 
@@ -716,6 +823,12 @@ namespace Cthangover.FFBattle
                     $"Enemy: {enemyWidget.Card.Name} → {action.Name} → {target.Card.Name}",
                     LogLevel.Debug);
 
+                var actionName = TranslationServer.Translate(action.Name).ToString();
+                LogActionDeclared(enemyWidget, actionName, target);
+                var hpBefore = target.Card.Attributes.Health.Value;
+                var defBefore = target.Card.Attributes.Defence.Value;
+                var stunBefore = CountStunTurns(target.Card);
+
                 var anim = CreateEnemyAnimation(enemyWidget, target, action);
                 if (anim != null)
                 {
@@ -724,6 +837,8 @@ namespace Cthangover.FFBattle
                         await root.ToSignal(root.GetTree(), "process_frame");
                     anim.DoEnd();
                 }
+
+                LogOutcome(enemyWidget, target, actionName, hpBefore, defBefore, stunBefore);
 
                 await root.ToSignal(root.GetTree().CreateTimer(0.2f), "timeout");
 
@@ -803,6 +918,8 @@ namespace Cthangover.FFBattle
                 ctx.NotifyCharacterDied(widget.Card);
             }
 
+            UpdateHudCounts();
+
             if (!_enemyPanel.HasAlive())
             {
                 GameLogger.Log("FF_BATTLE", "All enemies dead — player wins", LogLevel.Debug);
@@ -852,9 +969,169 @@ namespace Cthangover.FFBattle
             _playerPanel?.ClearAll();
             _enemyPanel?.ClearAll();
             _menuPanel?.HideMenu();
+            _detailPanel?.HidePassport();
+            _targetHint?.HideHint();
+            _logPanel?.Clear();
             if (_endTurnButton != null)
                 _endTurnButton.Visible = false;
         }
+
+        private void OnMenuSelectionChanged(int index)
+        {
+            if (_menuPanel.Entries == null || index < 0 || index >= _menuPanel.Entries.Count)
+            {
+                _detailPanel.HidePassport();
+                return;
+            }
+
+            var entry = _menuPanel.Entries[index];
+            _detailPanel.ShowPassport();
+
+            if (_detailKind == DetailActions)
+            {
+                if (entry.Data is ActionCharacter action)
+                    _detailPanel.ShowAction(action, BuildActionNote(action));
+                else
+                    _detailPanel.ShowHint(Translate("ff_battle/detail_back"));
+                return;
+            }
+
+            if (_detailKind == DetailItems)
+            {
+                if (entry.Data is IItem item)
+                    _detailPanel.ShowItem(item, item.ItemType.HasFlag(ItemType.TargetUsed), BuildItemNote(item));
+                else
+                    _detailPanel.ShowHint(Translate("ff_battle/detail_back"));
+                return;
+            }
+
+            _detailPanel.ShowHint(MainHintFor(entry.Key));
+        }
+
+        private string BuildActionNote(ActionCharacter action)
+        {
+            if (action.Properties == null)
+                return TranslationServer.Translate("ff_battle/detail_action").ToString();
+
+            var cost = action.GetInt("RequiredPoint", 1);
+            var attack = action.GetFloat("Attack", 0f);
+            if (attack > 0f)
+            {
+                var attacker = _currentCharacter?.Card?.Attributes?.Attack?.Value ?? 0;
+                return string.Format(Translate("ff_battle/detail_damage"),
+                    Mathf.RoundToInt(attack * attacker), attacker, attack.ToString("0.0"), cost);
+            }
+
+            var turns = action.GetInt("Turn", 0);
+            if (turns > 0)
+                return string.Format(Translate("ff_battle/detail_stun"), turns, cost);
+
+            var defence = action.GetInt("Defence", 0);
+            if (defence > 0)
+                return string.Format(Translate("ff_battle/detail_defence"), defence, cost);
+
+            var description = ActionCharacterUi.StripMarkup(ActionCharacterUi.Translate(action.Description));
+            return !string.IsNullOrEmpty(description) ? description : Translate("ff_battle/detail_action");
+        }
+
+        private static string BuildItemNote(IItem item)
+        {
+            var description = ActionCharacterUi.StripMarkup(ActionCharacterUi.Translate(item.Description));
+            return !string.IsNullOrEmpty(description)
+                ? description
+                : TranslationServer.Translate("ff_battle/detail_item").ToString();
+        }
+
+        private static string MainHintFor(string key)
+        {
+            switch (key)
+            {
+                case "attack": return TranslationServer.Translate("ff_battle/detail_attack").ToString();
+                case "items": return TranslationServer.Translate("ff_battle/detail_items").ToString();
+                case "defend": return TranslationServer.Translate("ff_battle/detail_defend").ToString();
+                case "escape": return TranslationServer.Translate("ff_battle/detail_escape").ToString();
+                default: return TranslationServer.Translate("ff_battle/detail_back").ToString();
+            }
+        }
+
+        private void LogActionDeclared(FFCharacterWidget source, string actionName, FFCharacterWidget target)
+        {
+            var entry = source == target
+                ? string.Format(Translate("ff_battle/log_action_self"), NameOf(source), actionName)
+                : string.Format(Translate("ff_battle/log_action"), NameOf(source), actionName, NameOf(target));
+            _logPanel.AddEntry(entry, FFBattleLogKind.Info);
+        }
+
+        private void LogOutcome(FFCharacterWidget source, FFCharacterWidget target, string actionName,
+            int hpBefore, int defBefore, int stunBefore)
+        {
+            var hpAfter = target.Card.Attributes.Health.Value;
+            var defAfter = target.Card.Attributes.Defence.Value;
+            var stunAfter = CountStunTurns(target.Card);
+
+            if (defAfter > defBefore)
+                _logPanel.AddEntry(string.Format(Translate("ff_battle/log_defence"),
+                    NameOf(target), defAfter - defBefore, defAfter), FFBattleLogKind.Buff);
+
+            var shieldLost = defBefore - defAfter;
+            if (shieldLost > 0)
+                _logPanel.AddEntry(string.Format(Translate("ff_battle/log_shield"),
+                    NameOf(target), shieldLost, defAfter), FFBattleLogKind.Shield);
+
+            if (stunAfter > stunBefore)
+                _logPanel.AddEntry(string.Format(Translate("ff_battle/log_stun"),
+                    NameOf(target), stunAfter), FFBattleLogKind.Status);
+
+            if (hpAfter > hpBefore)
+                _logPanel.AddEntry(string.Format(Translate("ff_battle/log_heal"),
+                    actionName, NameOf(target), hpAfter - hpBefore), FFBattleLogKind.Buff);
+
+            if (hpAfter < hpBefore)
+                _logPanel.AddEntry(string.Format(Translate("ff_battle/log_damage"),
+                    actionName, NameOf(source), NameOf(target), hpBefore - hpAfter), FFBattleLogKind.Damage);
+
+            if (hpAfter <= 0 && hpBefore > 0)
+                _logPanel.AddEntry(string.Format(Translate("ff_battle/log_death"), NameOf(target)), FFBattleLogKind.Dead);
+
+            UpdateHudCounts();
+        }
+
+        private static int CountStunTurns(Character character)
+        {
+            var stun = StatusEffectService.Of(character)?.ActiveStatusEffects?
+                .FirstOrDefault(effect => effect.EffectType == StatusEffectType.Stun);
+            return stun?.RemainingTurns ?? 0;
+        }
+
+        private string ActorName()
+            => _currentCharacter?.Card == null
+                ? string.Empty
+                : TranslationServer.Translate(_currentCharacter.Card.Name).ToString();
+
+        private static string NameOf(FFCharacterWidget widget)
+            => widget?.Card == null
+                ? string.Empty
+                : TranslationServer.Translate(widget.Card.Name).ToString();
+
+        private void UpdateHud()
+        {
+            if (_hud == null)
+                return;
+            _hud.SetRound(_round);
+            UpdateHudCounts();
+        }
+
+        private void UpdateHudCounts()
+        {
+            if (_hud == null)
+                return;
+            _hud.SetCounts(
+                _enemyPanel.Widgets.Count(w => !w.IsDead),
+                _playerPanel.Widgets.Count(w => !w.IsDead));
+        }
+
+        private static string Translate(string key)
+            => TranslationServer.Translate(key).ToString();
 
         /// <summary>
         /// <c>true</c> while the core accepts a player turn advance; flips to

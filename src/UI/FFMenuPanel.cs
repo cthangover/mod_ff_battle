@@ -39,6 +39,9 @@ namespace Cthangover.FFBattle.UI
         private ColorRect _background;
         private Panel _border;
         private Label _cursorLabel;
+        private Label _caption;
+        private StyleBoxFlat _rowActiveStyle;
+        private StyleBoxFlat _rowIdleStyle;
         private List<Label> _itemLabels = new();
         private Tween _cursorTween;
         private int _selectedIndex;
@@ -70,6 +73,8 @@ namespace Cthangover.FFBattle.UI
 
         /// <summary>Raised when an entry is confirmed (Enter/Space or left click).</summary>
         public event System.Action<int> OnItemSelected;
+        /// <summary>Raised when the highlighted entry changes (keyboard or mouse hover); carries the new index.</summary>
+        public event System.Action<int> OnSelectionChanged;
         /// <summary>Raised when the menu is cancelled (right click, or Escape handled externally).</summary>
         public event System.Action OnCancelled;
 
@@ -86,6 +91,12 @@ namespace Cthangover.FFBattle.UI
 
             _cursorLabel = GetNode<Label>("Cursor");
             _cursorLabel.AddThemeColorOverride("font_color", UiTokens.AccentBright);
+
+            _caption = GetNode<Label>("Caption");
+            _caption.AddThemeColorOverride("font_color", UiTokens.Muted);
+
+            _rowActiveStyle = UiKit.Frame(UiTokens.RadiusSm, UiTokens.AccentTrace, UiTokens.Alpha(UiTokens.White, 0f));
+            _rowIdleStyle = UiKit.Frame(UiTokens.RadiusSm, UiTokens.Alpha(UiTokens.White, 0f), UiTokens.Alpha(UiTokens.White, 0f));
 
             GuiInput += OnPanelGuiInput;
         }
@@ -112,6 +123,7 @@ namespace Cthangover.FFBattle.UI
                 label.AddThemeColorOverride("font_color", entries[i].Enabled
                     ? UiTokens.Ink
                     : UiTokens.Faint);
+                label.AddThemeStyleboxOverride("normal", _rowIdleStyle);
                 label.MouseFilter = MouseFilterEnum.Stop;
                 label.Position = new Vector2(PADDING + 24, PADDING + i * ITEM_HEIGHT + CURSOR_OFFSET_Y);
                 label.Size = new Vector2(width - PADDING * 2 - 24, ITEM_HEIGHT);
@@ -145,16 +157,19 @@ namespace Cthangover.FFBattle.UI
             _selectedIndex = 0;
             MoveCursor(0);
             _cursorLabel.Visible = true;
+            _caption.Text = title ?? string.Empty;
+            _caption.Visible = !string.IsNullOrEmpty(title);
             _visible = true;
             Visible = true;
         }
 
-        /// <summary>Hides the menu and cursor. Does not clear entries — call <see cref="ShowMenu"/> to repopulate.</summary>
+        /// <summary>Hides the menu, caption and cursor. Does not clear entries — call <see cref="ShowMenu"/> to repopulate.</summary>
         public void HideMenu()
         {
             _visible = false;
             Visible = false;
             _cursorLabel.Visible = false;
+            _caption.Visible = false;
         }
 
         /// <summary>Moves selection down, wrapping around and skipping disabled entries.</summary>
@@ -208,6 +223,17 @@ namespace Cthangover.FFBattle.UI
             _cursorTween.SetLoops();
             _cursorTween.TweenProperty(_cursorLabel, "position:x", CURSOR_OFFSET_X + 3f, 0.3f);
             _cursorTween.TweenProperty(_cursorLabel, "position:x", CURSOR_OFFSET_X, 0.3f);
+
+            for (var i = 0; i < _itemLabels.Count; i++)
+            {
+                var enabled = i < Entries.Count && Entries[i].Enabled;
+                var selected = i == index && enabled;
+                _itemLabels[i].AddThemeStyleboxOverride("normal", selected ? _rowActiveStyle : _rowIdleStyle);
+                _itemLabels[i].AddThemeColorOverride("font_color",
+                    selected ? UiTokens.AccentBright : enabled ? UiTokens.Ink : UiTokens.Faint);
+            }
+
+            OnSelectionChanged?.Invoke(index);
         }
 
         private void OnPanelGuiInput(InputEvent evt)

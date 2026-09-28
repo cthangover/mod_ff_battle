@@ -1,0 +1,88 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="src/UI/FFBattleHud.cs" id="1_script"]
+
+[node name="FFBattleHud" type="Control" script=ExtResource("1_script")]
+custom_minimum_size = Vector2(380, 92)
+layout_mode = 3
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Column" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 9
+
+[node name="TopRow" type="HBoxContainer" parent="Panel/Column"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="Panel/Column/TopRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 12
+text = "ff_battle/hud_title"
+auto_translate = true
+uppercase = true
+
+[node name="PhaseBadge" type="PanelContainer" parent="Panel/Column/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="PhaseLabel" type="Label" parent="Panel/Column/TopRow/PhaseBadge"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 10
+uppercase = true
+
+[node name="MetaRow" type="HBoxContainer" parent="Panel/Column"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="RoundCaption" type="Label" parent="Panel/Column/MetaRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 12
+text = "ff_battle/round"
+auto_translate = true
+
+[node name="RoundValue" type="Label" parent="Panel/Column/MetaRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 12
+text = "1"
+
+[node name="EnemiesCaption" type="Label" parent="Panel/Column/MetaRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 12
+text = "ff_battle/enemies"
+auto_translate = true
+
+[node name="EnemiesValue" type="Label" parent="Panel/Column/MetaRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 12
+text = "0"
+
+[node name="AlliesCaption" type="Label" parent="Panel/Column/MetaRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 12
+text = "ff_battle/allies"
+auto_translate = true
+
+[node name="AlliesValue" type="Label" parent="Panel/Column/MetaRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 12
+text = "0"

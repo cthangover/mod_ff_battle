@@ -1,0 +1,94 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="src/UI/FFActionDetailPanel.cs" id="1_script"]
+
+[node name="FFActionDetailPanel" type="Control" script=ExtResource("1_script")]
+custom_minimum_size = Vector2(300, 160)
+layout_mode = 3
+mouse_filter = 2
+
+[node name="Box" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="Card" type="PanelContainer" parent="Box"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="CardRow" type="HBoxContainer" parent="Box/Card"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Stripe" type="ColorRect" parent="Box/Card/CardRow"]
+custom_minimum_size = Vector2(4, 0)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="IconMargin" type="MarginContainer" parent="Box/Card/CardRow"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="CardIcon" type="TextureRect" parent="Box/Card/CardRow/IconMargin"]
+custom_minimum_size = Vector2(52, 52)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Body" type="VBoxContainer" parent="Box/Card/CardRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="NameRow" type="HBoxContainer" parent="Box/Card/CardRow/Body"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="NameLabel" type="Label" parent="Box/Card/CardRow/Body/NameRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 14
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="IdLabel" type="Label" parent="Box/Card/CardRow/Body/NameRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 9
+
+[node name="Badges" type="HFlowContainer" parent="Box/Card/CardRow/Body"]
+layout_mode = 2
+theme_override_constants/h_separation = 5
+theme_override_constants/v_separation = 5
+
+[node name="Props" type="HFlowContainer" parent="Box/Card/CardRow/Body"]
+layout_mode = 2
+theme_override_constants/h_separation = 5
+theme_override_constants/v_separation = 3
+
+[node name="Note" type="PanelContainer" parent="Box"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="NoteLabel" type="Label" parent="Box/Note"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 3

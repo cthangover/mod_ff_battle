@@ -47,8 +47,8 @@ namespace Cthangover.FFBattle.UI
                 var widget = (FFCharacterWidget)TscnScenes.LoadAndBuild("scenes/ff_character_widget.tscn");
                 widget.EnsureConstructed();
                 widget.Scale = new Vector2(scale, scale);
-                widget.Init(players[i]);
                 widget.IsPlayer = true;
+                widget.Init(players[i]);
                 widget.MouseFilter = MouseFilterEnum.Stop;
                 widget.GuiInput += (evt) =>
                 {

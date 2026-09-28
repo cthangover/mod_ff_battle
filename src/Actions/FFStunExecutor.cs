@@ -1,3 +1,4 @@
+using Cthangover.Core.Cards.StatusEffect;
 using Cthangover.Core.Characters;
 using Cthangover.Core.Utils;
 
@@ -23,8 +24,7 @@ namespace Cthangover.FFBattle.Actions
                 return new ChangedAttributes { Result = true };
 
             var turns = action.GetInt("Turn", 3);
-            target.StatusEffectQueue.Add("effect/physics/stun", turns);
-
+            StatusEffectService.Of(target).Add("effect/physics/stun", turns);
             GameLogger.Log("FF_BATTLE",
                 $"{user.Name} stuns {target.Name} for {turns} turns",
                 LogLevel.Debug);

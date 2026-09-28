@@ -1,7 +1,8 @@
 using System;
-using Cthangover.Core.Mods;
-using Cthangover.Core.Mods.Resolvers;
+using System.Linq;
+using Cthangover.Core.Cards.StatusEffect;
 using Cthangover.Core.Characters;
+using Cthangover.Core.Mods.Resolvers;
 using Cthangover.Core.UI;
 using Cthangover.Core.UI.Theming;
 using Godot;
@@ -9,23 +10,44 @@ using Godot;
 namespace Cthangover.FFBattle.UI
 {
     /// <summary>
-    /// Visual representation of a single character (player or enemy) in the FF battle UI.
-    /// Composite widget containing a sprite, HP bar, name label, and selection overlay.
-    /// Supports highlight, flash, shake, and dissolve-death animations via Godot tweens.
-    /// Created per-character by <see cref="FFPlayerPanel.Init"/> and
-    /// <see cref="FFEnemyPanel.Init"/>. Clickable via <c>GuiInput</c> events;
-    /// embedding panels wire these to <see cref="FFBattleCore"/> for action flow.
+    /// Battle card of a single combatant, shared by the party and enemy panels.
+    /// The node tree lives in <c>scenes/ff_character_widget.tscn</c>; this class
+    /// only fetches the nodes, dresses them with <see cref="UiTokens"/> styles and
+    /// refreshes their content. Visually the card follows the unified style guide:
+    /// a team accent line on top, a sprite well, status badges in the upper right
+    /// and an info block holding name, HP numbers, HP bar, action point pips
+    /// (party) or attack caption (enemies) and the defence shield chip.
+    /// <para/>
+    /// The public surface is animation-facing, not layout-facing:
+    /// <see cref="Highlight"/> paints the selection frame, <see cref="Flash"/> and
+    /// <see cref="Shake"/> give impact feedback, <see cref="PlayDeathAnimation"/>
+    /// dissolves the card. Battle code never touches labels directly — it mutates
+    /// the <see cref="Character"/> and calls <see cref="UpdateInfo"/>, which
+    /// re-reads health, defence, points and stun in one place. Panels must assign
+    /// <see cref="IsPlayer"/> before <see cref="Init"/>, because the team colour is
+    /// applied during initialisation.
     /// </summary>
     public partial class FFCharacterWidget : ModWidget
     {
-        private TextureRect _sprite;
-        private TextureRect _selection;
+        /// <summary>Diameter of one action point pip.</summary>
+        private const int PipSize = 9;
+
+        private TextureRect _art;
+        private ColorRect _teamLine;
+        private Panel _selection;
+        private Panel _teamDot;
         private Label _nameLabel;
-        private ColorRect _hpBg;
-        private ColorRect _hpFill;
+        private Label _hpNumLabel;
+        private ProgressBar _hpBar;
+        private HBoxContainer _pipsBox;
+        private Label _atkLabel;
+        private PanelContainer _shieldChip;
+        private Label _shieldValue;
+        private VBoxContainer _statusBox;
+        private PanelContainer _stunBadge;
+        private TextureRect _stunIcon;
+        private Label _stunLabel;
         private Tween _animTween;
-        private static Texture2D _cachedSelectTex;
-        private static bool _selectTexLoaded;
         private static Shader _dissolveShader;
 
         /// <summary>Whether this widget belongs to the player party (affects highlight/targeting logic).</summary>
@@ -34,7 +56,7 @@ namespace Cthangover.FFBattle.UI
         public bool IsDead { get; set; }
         /// <summary>The character data model backing this widget: stats, actions, status effects.</summary>
         public Character Card { get; set; }
-        /// <summary>Original scale captured at construction; used to restore after death animation.</summary>
+        /// <summary>Original scale captured at initialisation; used to restore after death animation.</summary>
         public Vector2 BaseScale { get; private set; }
         /// <summary>Exposes this widget as a <see cref="Godot.Control"/> for layout calculations.</summary>
         public Control ControlNode => this;
@@ -43,33 +65,29 @@ namespace Cthangover.FFBattle.UI
         {
             CthangoverTheme.Apply(this);
 
-            _sprite = GetNode<TextureRect>("Sprite");
-            _hpBg = GetNode<ColorRect>("HpBg");
-            _hpFill = GetNode<ColorRect>("HpFill");
-            _nameLabel = GetNode<Label>("NameLabel");
-            _selection = GetNode<TextureRect>("Selection");
+            _teamLine = GetNode<ColorRect>("TeamLine");
+            _art = GetNode<TextureRect>("Art");
+            _nameLabel = GetNode<Label>("Info/Column/NameRow/NameLabel");
+            _teamDot = GetNode<Panel>("Info/Column/NameRow/TeamDot");
+            _hpNumLabel = GetNode<Label>("Info/Column/NameRow/HpNumLabel");
+            _hpBar = GetNode<ProgressBar>("Info/Column/HpBar");
+            _pipsBox = GetNode<HBoxContainer>("Info/Column/Foot/PipsBox");
+            _atkLabel = GetNode<Label>("Info/Column/Foot/AtkLabel");
+            _shieldChip = GetNode<PanelContainer>("Info/Column/Foot/ShieldChip");
+            _shieldValue = GetNode<Label>("Info/Column/Foot/ShieldChip/ShieldRow/ShieldValue");
+            _statusBox = GetNode<VBoxContainer>("StatusBox");
+            _stunBadge = GetNode<PanelContainer>("StatusBox/StunBadge");
+            _stunIcon = GetNode<TextureRect>("StatusBox/StunBadge/StunRow/StunIcon");
+            _stunLabel = GetNode<Label>("StatusBox/StunBadge/StunRow/StunLabel");
+            _selection = GetNode<Panel>("Selection");
 
-            Size = CustomMinimumSize;
-
-            if (!_selectTexLoaded)
-            {
-                _cachedSelectTex = Textures.Resolve("select");
-                _selectTexLoaded = true;
-            }
-            if (_cachedSelectTex != null)
-            {
-                _selection.Texture = _cachedSelectTex;
-                _selection.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
-                _selection.StretchMode = TextureRect.StretchModeEnum.Scale;
-                _selection.Modulate = UiTokens.Alpha(UiTokens.White, 0f);
-            }
+            ApplyStyles();
         }
 
         /// <summary>
-        /// Binds this widget to a <see cref="Character"/> model. Sets the sprite from
-        /// <see cref="Character.Image"/>, localises the name via
-        /// <see cref="TranslationServer"/>, and calls <see cref="UpdateInfo"/>
-        /// to refresh the HP bar.
+        /// Binds the widget to a <see cref="Character"/>: sprite, localised name,
+        /// team colour and per-side info layout. The team colour is derived from
+        /// <see cref="IsPlayer"/>, which is why callers set it before calling here.
         /// </summary>
         public void Init(Character character)
         {
@@ -77,33 +95,72 @@ namespace Cthangover.FFBattle.UI
             BaseScale = Scale;
             IsDead = false;
 
-            if (_sprite != null && character.Image != null)
-                _sprite.Texture = character.Image;
+            if (_art != null && character?.Image != null)
+                _art.Texture = character.Image;
 
             if (_nameLabel != null)
-                _nameLabel.Text = TranslationServer.Translate(character.Name);
+                _nameLabel.Text = TranslationServer.Translate(character?.Name ?? string.Empty).ToString();
+
+            var teamColor = IsPlayer ? UiTokens.Info : UiTokens.Danger;
+            if (_teamLine != null)
+                _teamLine.Color = UiTokens.Alpha(teamColor, 0.55f);
+            if (_teamDot != null)
+                _teamDot.AddThemeStyleboxOverride("panel", UiKit.Frame(4, UiTokens.Alpha(teamColor, 0.9f)));
+            if (_pipsBox != null)
+                _pipsBox.Visible = IsPlayer;
+            if (_atkLabel != null)
+                _atkLabel.Visible = !IsPlayer;
 
             UpdateInfo();
         }
 
-        /// <summary>Refreshes the HP bar fill width and colour gradient based on current health percentage.</summary>
+        /// <summary>
+        /// Single refresh entry point for all mutable character state: HP bar and
+        /// numbers with threshold colours, action point pips, shield chip, attack
+        /// caption and the stun badge with its remaining turns. Called by battle
+        /// code and by animations after each resolved action.
+        /// </summary>
         public void UpdateInfo()
         {
-            if (_hpFill == null || Card == null)
+            if (Card?.Attributes == null)
                 return;
 
-            var hpPercent = Card.Attributes.Health.Percent;
-            _hpFill.Size = new Vector2((Size.X - 8) * hpPercent, 18);
+            var health = Card.Attributes.Health;
+            var percent = Mathf.Clamp(health.Percent, 0f, 1f);
+            var fillColor = percent > 0.5f ? UiTokens.HpOk : percent > 0.25f ? UiTokens.Warning : UiTokens.HpLow;
+            var textColor = percent > 0.5f ? UiTokens.HpText : percent > 0.25f ? UiTokens.Warning : UiTokens.DangerText;
 
-            if (hpPercent > 0.5f)
-                _hpFill.Color = UiTokens.HpOk;
-            else if (hpPercent > 0.25f)
-                _hpFill.Color = UiTokens.Warning;
-            else
-                _hpFill.Color = UiTokens.HpLow;
+            if (_hpBar != null)
+            {
+                _hpBar.Value = percent * 100f;
+                _hpBar.AddThemeStyleboxOverride("background", UiKit.Frame(UiTokens.RadiusSm, UiTokens.LineDisabled));
+                _hpBar.AddThemeStyleboxOverride("fill", UiKit.Frame(UiTokens.RadiusSm, fillColor));
+            }
+
+            if (_hpNumLabel != null)
+            {
+                _hpNumLabel.Text = $"{health.Value}/{health.BaseValue}";
+                _hpNumLabel.AddThemeColorOverride("font_color", textColor);
+            }
+
+            if (_pipsBox != null && IsPlayer)
+                RefreshPips();
+
+            if (_atkLabel != null && !IsPlayer)
+                _atkLabel.Text = string.Format("{0} {1}", Translate("ui/character_panel/stat_atk"), Card.Attributes.Attack.Value);
+
+            if (_shieldChip != null)
+            {
+                var defence = Card.Attributes.Defence?.Value ?? 0;
+                _shieldChip.Visible = defence > 0;
+                if (_shieldValue != null)
+                    _shieldValue.Text = defence.ToString();
+            }
+
+            RefreshStun();
         }
 
-        /// <summary>Shows a coloured selection overlay with a 0.15s tween fade-in. Used for target highlighting and selection indication.</summary>
+        /// <summary>Shows a coloured selection frame over the card with a 0.15s fade.</summary>
         public void Highlight(Color color)
         {
             if (_selection == null)
@@ -115,7 +172,7 @@ namespace Cthangover.FFBattle.UI
             _animTween.TweenProperty(_selection, "modulate", color, 0.15f);
         }
 
-        /// <summary>Fades out the selection overlay to transparent via a 0.15s tween.</summary>
+        /// <summary>Fades the selection frame out via a 0.15s tween.</summary>
         public void ClearHighlight()
         {
             if (_selection == null)
@@ -127,7 +184,7 @@ namespace Cthangover.FFBattle.UI
             _animTween.TweenProperty(_selection, "modulate", UiTokens.Alpha(UiTokens.White, 0f), 0.15f);
         }
 
-        /// <summary>Rapidly oscillates the widget's position with random offsets (6 iterations) to simulate impact feedback.</summary>
+        /// <summary>Rapidly oscillates the widget with random offsets to simulate impact feedback.</summary>
         public void Shake(float intensity, float duration)
         {
             var originalPos = Position;
@@ -145,7 +202,7 @@ namespace Cthangover.FFBattle.UI
             }
         }
 
-        /// <summary>Briefly tints the entire widget with a colour pulse (30% rise, 70% fall) for damage/heal feedback.</summary>
+        /// <summary>Briefly tints the whole card with a colour pulse (30% rise, 70% fall).</summary>
         public void Flash(Color color, float duration)
         {
             var originalModulate = Modulate;
@@ -156,11 +213,11 @@ namespace Cthangover.FFBattle.UI
         }
 
         /// <summary>
-        /// Plays a dissolve-and-shrink death sequence. If a <c>"scene_transition"</c>
-        /// shader is available, applies a dissolve material to the sprite. Fades the
-        /// widget alpha, scales it to zero, and hides the HP bar and name label.
-        /// Invokes <paramref name="onComplete"/> when finished so the parent panel
-        /// can remove the widget from the grid.
+        /// Plays a dissolve-and-shrink death sequence. The sprite gets the
+        /// <c>scene_transition</c> shader with a growing dissolve progress while the
+        /// card fades and squashes; the info block fades with it. Invokes
+        /// <paramref name="onComplete"/> when finished so the parent panel can
+        /// remove the widget and re-grid the survivors.
         /// </summary>
         public void PlayDeathAnimation(Action onComplete)
         {
@@ -180,21 +237,20 @@ namespace Cthangover.FFBattle.UI
             if (_dissolveShader == null)
                 _dissolveShader = Shaders.Resolve("scene_transition");
 
-            if (_dissolveShader != null && _sprite?.Texture != null)
+            if (_dissolveShader != null && _art?.Texture != null)
             {
-                var mat = new ShaderMaterial { Shader = _dissolveShader };
-                mat.SetShaderParameter("noise_scale", 5f);
-                mat.SetShaderParameter("smoothness", 0.25f);
-                mat.SetShaderParameter("distortion", 0.092f);
-                mat.SetShaderParameter("glow_intensity", 0f);
-                mat.SetShaderParameter("hue_shift", 0f);
-                mat.SetShaderParameter("invert_direction", false);
-                mat.SetShaderParameter("progress", 0f);
-                _sprite.Material = mat;
+                var material = new ShaderMaterial { Shader = _dissolveShader };
+                material.SetShaderParameter("noise_scale", 5f);
+                material.SetShaderParameter("smoothness", 0.25f);
+                material.SetShaderParameter("distortion", 0.092f);
+                material.SetShaderParameter("glow_intensity", 0f);
+                material.SetShaderParameter("hue_shift", 0f);
+                material.SetShaderParameter("invert_direction", false);
+                material.SetShaderParameter("progress", 0f);
+                _art.Material = material;
 
-                var matTween = CreateTween();
-                matTween.TweenMethod(
-                    Callable.From<float>(t => mat.SetShaderParameter("progress", t)),
+                CreateTween().TweenMethod(
+                    Callable.From<float>(t => material.SetShaderParameter("progress", t)),
                     0f, 1f, duration);
             }
 
@@ -202,9 +258,13 @@ namespace Cthangover.FFBattle.UI
             tween.SetParallel(true);
             tween.TweenProperty(this, "modulate:a", 0f, duration * 0.5f);
             tween.TweenProperty(this, "scale", BaseScale * new Vector2(0.1f, 1.2f), duration);
-            tween.TweenProperty(_hpBg, "modulate:a", 0f, duration);
-            tween.TweenProperty(_hpFill, "modulate:a", 0f, duration);
+            tween.TweenProperty(_hpBar, "modulate:a", 0f, duration);
+            tween.TweenProperty(_hpNumLabel, "modulate:a", 0f, duration);
             tween.TweenProperty(_nameLabel, "modulate:a", 0f, duration);
+            tween.TweenProperty(_pipsBox, "modulate:a", 0f, duration);
+            tween.TweenProperty(_atkLabel, "modulate:a", 0f, duration);
+            tween.TweenProperty(_shieldChip, "modulate:a", 0f, duration);
+            tween.TweenProperty(_statusBox, "modulate:a", 0f, duration);
 
             tween.Chain().TweenProperty(this, "scale", Vector2.Zero, 0.15f);
 
@@ -213,5 +273,100 @@ namespace Cthangover.FFBattle.UI
                 onComplete?.Invoke();
             };
         }
+
+        private void ApplyStyles()
+        {
+            _teamLine.Color = UiTokens.Alpha(UiTokens.Danger, 0.55f);
+
+            var infoStyle = UiKit.Frame(UiTokens.RadiusMd, UiTokens.Alpha(UiTokens.Surface2, 0.93f), UiTokens.Line);
+            infoStyle.CornerRadiusTopLeft = 0;
+            infoStyle.CornerRadiusTopRight = 0;
+            infoStyle.ContentMarginLeft = 8;
+            infoStyle.ContentMarginRight = 8;
+            infoStyle.ContentMarginTop = 6;
+            infoStyle.ContentMarginBottom = 8;
+            GetNode<PanelContainer>("Info").AddThemeStyleboxOverride("panel", infoStyle);
+
+            _nameLabel.AddThemeColorOverride("font_color", UiTokens.InkBright);
+            _hpNumLabel.AddThemeColorOverride("font_color", UiTokens.HpText);
+            _atkLabel.AddThemeColorOverride("font_color", UiTokens.Muted);
+            _teamDot.AddThemeStyleboxOverride("panel", UiKit.Frame(4, UiTokens.Danger));
+
+            var hpBackground = UiKit.Frame(UiTokens.RadiusSm, UiTokens.LineDisabled);
+            var hpFill = UiKit.Frame(UiTokens.RadiusSm, UiTokens.HpOk);
+            _hpBar.AddThemeStyleboxOverride("background", hpBackground);
+            _hpBar.AddThemeStyleboxOverride("fill", hpFill);
+
+            var shieldStyle = UiKit.Frame(UiTokens.RadiusXs, UiTokens.StatBg, UiTokens.StatLine);
+            shieldStyle.ContentMarginLeft = 7;
+            shieldStyle.ContentMarginRight = 7;
+            shieldStyle.ContentMarginTop = 2;
+            shieldStyle.ContentMarginBottom = 2;
+            _shieldChip.AddThemeStyleboxOverride("panel", shieldStyle);
+            GetNode<Label>("Info/Column/Foot/ShieldChip/ShieldRow/ShieldKey").AddThemeColorOverride("font_color", UiTokens.Muted);
+            _shieldValue.AddThemeColorOverride("font_color", UiTokens.Info);
+
+            var stunStyle = UiKit.Frame(UiTokens.RadiusXs, UiTokens.CooldownSoft, UiTokens.CooldownLine);
+            stunStyle.ContentMarginLeft = 5;
+            stunStyle.ContentMarginRight = 8;
+            stunStyle.ContentMarginTop = 3;
+            stunStyle.ContentMarginBottom = 3;
+            _stunBadge.AddThemeStyleboxOverride("panel", stunStyle);
+            _stunLabel.AddThemeColorOverride("font_color", UiTokens.Cooldown);
+
+            var selectionStyle = UiKit.Frame(UiTokens.RadiusMd, new Color(1f, 1f, 1f, 0.07f), Colors.White, 2);
+            _selection.AddThemeStyleboxOverride("panel", selectionStyle);
+            _selection.Modulate = UiTokens.Alpha(UiTokens.White, 0f);
+        }
+
+        private void RefreshPips()
+        {
+            foreach (var child in _pipsBox.GetChildren())
+            {
+                _pipsBox.RemoveChild(child);
+                child.QueueFree();
+            }
+
+            var basePoints = Mathf.Max(0, Card.Attributes.Point.BaseValue);
+            var points = Card.Attributes.Point.Value;
+            for (var i = 0; i < basePoints; i++)
+            {
+                var on = i < points;
+                var pip = new Panel
+                {
+                    MouseFilter = MouseFilterEnum.Ignore,
+                    CustomMinimumSize = new Vector2(PipSize, PipSize),
+                };
+                pip.AddThemeStyleboxOverride("panel", UiKit.Frame(
+                    PipSize / 2,
+                    on ? UiTokens.AccentBright : UiTokens.LineDisabled,
+                    on ? UiTokens.Accent : UiTokens.LineFaint));
+                _pipsBox.AddChild(pip);
+            }
+        }
+
+        private void RefreshStun()
+        {
+            if (_stunBadge == null)
+                return;
+
+            var stun = StatusEffectService.Of(Card)?.ActiveStatusEffects?
+                .FirstOrDefault(effect => effect.EffectType == StatusEffectType.Stun);
+
+            if (stun == null)
+            {
+                _stunBadge.Visible = false;
+                return;
+            }
+
+            _stunBadge.Visible = true;
+            if (_stunIcon != null)
+                _stunIcon.Texture = stun.Icon;
+            if (_stunLabel != null)
+                _stunLabel.Text = string.Format(Translate("ff_battle/status_stun"), stun.RemainingTurns);
+        }
+
+        private static string Translate(string key)
+            => TranslationServer.Translate(key).ToString();
     }
 }

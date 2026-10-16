@@ -1,6 +1,7 @@
 using Cthangover.Core.UI;
 using Godot;
 
+using Cthangover.Mods.Interface.Base;
 namespace Cthangover.FFBattle.UI
 {
     /// <summary>
@@ -77,6 +78,7 @@ namespace Cthangover.FFBattle.UI
             ProcessMode = ProcessModeEnum.Always;
         }
 
+        /// <summary>Routes menu/confirm input into the FF battle state machine (target select, turn advance).</summary>
         protected override void OnInput(InputEvent @event)
         {
             if (State == FFBattleState.AnimationPlaying || State == FFBattleState.Ended)

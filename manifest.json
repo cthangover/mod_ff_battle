@@ -3,7 +3,7 @@
   "name": "FFBattle",
   "version": "1.0.0",
   "author": "ct",
-  "description": "Final Fantasy style battle system",
+  "description": "Final Fantasy style battle system on top of turn_battle_base: menu-driven commands (attack/defence/item/stun), enemy and party panels, per-action animations and executors, battle HUD and log.",
   "category": "gameplay",
   "sources": [
     "src/**/*.cs"

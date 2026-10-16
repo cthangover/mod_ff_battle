@@ -1,4 +1,4 @@
-﻿using Cthangover.Core.Characters;
+using Cthangover.Core.Characters;
 using Cthangover.Core.Items;
 using Cthangover.FFBattle.UI;
 using Cthangover.Core.UI.Theming;
@@ -31,9 +31,10 @@ namespace Cthangover.FFBattle.Actions
             _item = item;
         }
 
+        /// <summary>Spawns the raised item icon above the user and starts the item sequence.</summary>
         protected override void DoInternalStart()
         {
-            Timestamp = Time.GetTicksUsec() / 1_000_000.0;
+            Timestamp = Godot.Time.GetTicksUsec() / 1_000_000.0;
             _effectApplied = false;
             _phase = Phase.RaiseItem;
 
@@ -49,9 +50,10 @@ namespace Cthangover.FFBattle.Actions
             }
         }
 
+        /// <summary>Advances raise-item → apply (item use with effect flash) → lower-icon.</summary>
         protected override bool DoInternalAction()
         {
-            var elapsed = (float)(Time.GetTicksUsec() / 1_000_000.0 - Timestamp) * Speed * (float)Engine.TimeScale;
+            var elapsed = (float)(Godot.Time.GetTicksUsec() / 1_000_000.0 - Timestamp) * Speed * (float)Godot.Engine.TimeScale;
 
             switch (_phase)
             {
@@ -71,7 +73,7 @@ namespace Cthangover.FFBattle.Actions
                     if (progress >= 1f)
                     {
                         _phase = Phase.ApplyEffect;
-                        Timestamp = Time.GetTicksUsec() / 1_000_000.0;
+                        Timestamp = Godot.Time.GetTicksUsec() / 1_000_000.0;
                     }
                     break;
                 }
@@ -103,7 +105,7 @@ namespace Cthangover.FFBattle.Actions
                     if (progress >= 1f)
                     {
                         _phase = Phase.Recover;
-                        Timestamp = Time.GetTicksUsec() / 1_000_000.0;
+                        Timestamp = Godot.Time.GetTicksUsec() / 1_000_000.0;
                     }
                     break;
                 }
@@ -125,9 +127,11 @@ namespace Cthangover.FFBattle.Actions
             return false;
         }
 
+        /// <summary>Frees the item icon, returns the user to its original position and refreshes both widgets.</summary>
         protected override void DoInternalEnd()
         {
-            Source.GlobalPosition = SourcePos;
+            if (IsAlive(Source))
+                Source.GlobalPosition = SourcePos;
 
             if (_itemIcon != null)
             {

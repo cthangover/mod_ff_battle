@@ -3,6 +3,8 @@ using Cthangover.Core.UI;
 using Cthangover.Core.UI.Theming;
 using Godot;
 
+using Cthangover.Mods.Interface.Base.Lists;
+using Cthangover.Mods.Interface.Theming;
 namespace Cthangover.FFBattle.UI
 {
     /// <summary>
@@ -78,6 +80,7 @@ namespace Cthangover.FFBattle.UI
         /// <summary>Raised when the menu is cancelled (right click, or Escape handled externally).</summary>
         public event System.Action OnCancelled;
 
+        /// <summary>Builds the command menu list (Attack/Defence/Item/...) used during the player turn.</summary>
         protected override void Construct()
         {
             CthangoverTheme.Apply(this);
@@ -251,6 +254,7 @@ namespace Cthangover.FFBattle.UI
             _itemLabels.Clear();
         }
 
+        /// <summary>Frees the menu entries and disconnects selection handlers when the panel closes.</summary>
         protected override void Destruct()
         {
             ClearEntries();

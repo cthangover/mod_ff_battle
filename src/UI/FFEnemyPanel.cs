@@ -7,6 +7,7 @@ using Cthangover.Core.UI;
 using Cthangover.Core.UI.Theming;
 using Godot;
 
+using Cthangover.Mods.Interface.Base.Lists;
 namespace Cthangover.FFBattle.UI
 {
     /// <summary>
@@ -33,6 +34,7 @@ namespace Cthangover.FFBattle.UI
         /// <summary>Raised when an enemy widget is clicked (used for target selection).</summary>
         public event System.Action<FFCharacterWidget> OnEnemyClicked;
 
+        /// <summary>Builds the enemy grid panel and lays out enemy widgets.</summary>
         protected override void Construct()
         {
             CthangoverTheme.Apply(this);

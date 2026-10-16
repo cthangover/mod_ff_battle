@@ -16,8 +16,10 @@ namespace Cthangover.FFBattle.Actions
     /// </summary>
     public class FFDamageExecutor : ActionBase
     {
+        /// <summary>Hub registry key for this executor.</summary>
         public override string ID => "FFDamageExecutor";
 
+        /// <summary>Applies attack damage with status hooks and defence absorption; consumes the action's required points.</summary>
         public override ChangedAttributes Execute(ActionCharacter action, Character user, Character target)
         {
             if (target == null || user == null || !CheckRequiredAndUsePoint(action, user))

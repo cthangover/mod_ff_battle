@@ -2,6 +2,8 @@ using Cthangover.Core.UI;
 using Cthangover.Core.UI.Theming;
 using Godot;
 
+using Cthangover.Mods.Interface.Base.Lists;
+using Cthangover.Mods.Interface.Theming;
 namespace Cthangover.FFBattle.UI
 {
     /// <summary>
@@ -21,6 +23,7 @@ namespace Cthangover.FFBattle.UI
         private Label _enemiesValue;
         private Label _alliesValue;
 
+        /// <summary>Builds the FF battle HUD frame: command menu host, speed control and log toggle.</summary>
         protected override void Construct()
         {
             CthangoverTheme.Apply(this);

@@ -13,8 +13,10 @@ namespace Cthangover.FFBattle.Actions
     /// </summary>
     public class FFStunExecutor : ActionBase
     {
+        /// <summary>Hub registry key for this executor.</summary>
         public override string ID => "FFStunExecutor";
 
+        /// <summary>Adds the stun effect for the action's "Turn" count (default 3); stun-immune targets consume the points but stay un-stunned.</summary>
         public override ChangedAttributes Execute(ActionCharacter action, Character user, Character target)
         {
             if (target == null || user == null || !CheckRequiredAndUsePoint(action, user))

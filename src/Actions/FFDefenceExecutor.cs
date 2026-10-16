@@ -12,8 +12,10 @@ namespace Cthangover.FFBattle.Actions
     /// </summary>
     public class FFDefenceExecutor : ActionBase
     {
+        /// <summary>Hub registry key for this executor.</summary>
         public override string ID => "FFDefenceExecutor";
 
+        /// <summary>Adds the action's "Defence" value (default 4) to the target's defence shield.</summary>
         public override ChangedAttributes Execute(ActionCharacter action, Character user, Character target)
         {
             if (target == null || user == null || !CheckRequiredAndUsePoint(action, user))

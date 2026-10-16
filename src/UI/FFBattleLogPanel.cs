@@ -2,6 +2,8 @@ using Cthangover.Core.UI;
 using Cthangover.Core.UI.Theming;
 using Godot;
 
+using Cthangover.Mods.Interface.Base.Lists;
+using Cthangover.Mods.Interface.Theming;
 namespace Cthangover.FFBattle.UI
 {
     /// <summary>
@@ -23,6 +25,7 @@ namespace Cthangover.FFBattle.UI
         private ScrollContainer _scroll;
         private VBoxContainer _rows;
 
+        /// <summary>Builds the scrollable FF battle log with coloured entries per <see cref="FFBattleLogKind"/>.</summary>
         protected override void Construct()
         {
             CthangoverTheme.Apply(this);

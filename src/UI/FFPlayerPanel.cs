@@ -6,6 +6,7 @@ using Cthangover.Core.UI;
 using Cthangover.Core.UI.Theming;
 using Godot;
 
+using Cthangover.Mods.Interface.Base.Lists;
 namespace Cthangover.FFBattle.UI
 {
     /// <summary>
@@ -26,6 +27,7 @@ namespace Cthangover.FFBattle.UI
         /// <summary>Raised when a player widget is clicked — routed to <see cref="FFBattleCore"/> for character selection.</summary>
         public event System.Action<FFCharacterWidget> OnWidgetClicked;
 
+        /// <summary>Builds the bottom player-party panel hosting one widget per party member.</summary>
         protected override void Construct()
         {
             CthangoverTheme.Apply(this);

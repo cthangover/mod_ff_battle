@@ -66,10 +66,28 @@ layout_mode = 2
 size_flags_vertical = 4
 theme_override_font_sizes/font_size = 11
 
-[node name="HpBar" type="ProgressBar" parent="Info/Column"]
+[node name="HpBarStack" type="Control" parent="Info/Column"]
 custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
-size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="ShieldBar" type="ProgressBar" parent="Info/Column/HpBarStack"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+show_percentage = false
+
+[node name="HpBar" type="ProgressBar" parent="Info/Column/HpBarStack"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 show_percentage = false
 

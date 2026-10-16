@@ -7,6 +7,8 @@ using Cthangover.Core.UI;
 using Cthangover.Core.UI.Theming;
 using Godot;
 
+using Cthangover.Mods.Interface.Base.Lists;
+using Cthangover.Mods.Interface.Theming;
 namespace Cthangover.FFBattle.UI
 {
     /// <summary>
@@ -15,7 +17,10 @@ namespace Cthangover.FFBattle.UI
     /// only fetches the nodes, dresses them with <see cref="UiTokens"/> styles and
     /// refreshes their content. Visually the card follows the unified style guide:
     /// a team accent line on top, a sprite well, status badges in the upper right
-    /// and an info block holding name, HP numbers, HP bar, action point pips
+    /// and an info block holding name, HP numbers, the layered health bar
+    /// (<see cref="UiKit.StyleShieldedHealthBar"/>: track → health fill → blue
+    /// defence segment drawn past the health edge while
+    /// <see cref="CharacterAttributes.Defence"/> absorbs damage), action point pips
     /// (party) or attack caption (enemies) and the defence shield chip.
     /// <para/>
     /// The public surface is animation-facing, not layout-facing:
@@ -38,6 +43,7 @@ namespace Cthangover.FFBattle.UI
         private Panel _teamDot;
         private Label _nameLabel;
         private Label _hpNumLabel;
+        private ProgressBar _shieldBar;
         private ProgressBar _hpBar;
         private HBoxContainer _pipsBox;
         private Label _atkLabel;
@@ -61,6 +67,7 @@ namespace Cthangover.FFBattle.UI
         /// <summary>Exposes this widget as a <see cref="Godot.Control"/> for layout calculations.</summary>
         public Control ControlNode => this;
 
+        /// <summary>Builds the character widget: portrait frame, HP bar and status chips.</summary>
         protected override void Construct()
         {
             CthangoverTheme.Apply(this);
@@ -70,7 +77,8 @@ namespace Cthangover.FFBattle.UI
             _nameLabel = GetNode<Label>("Info/Column/NameRow/NameLabel");
             _teamDot = GetNode<Panel>("Info/Column/NameRow/TeamDot");
             _hpNumLabel = GetNode<Label>("Info/Column/NameRow/HpNumLabel");
-            _hpBar = GetNode<ProgressBar>("Info/Column/HpBar");
+            _shieldBar = GetNode<ProgressBar>("Info/Column/HpBarStack/ShieldBar");
+            _hpBar = GetNode<ProgressBar>("Info/Column/HpBarStack/HpBar");
             _pipsBox = GetNode<HBoxContainer>("Info/Column/Foot/PipsBox");
             _atkLabel = GetNode<Label>("Info/Column/Foot/AtkLabel");
             _shieldChip = GetNode<PanelContainer>("Info/Column/Foot/ShieldChip");
@@ -115,27 +123,34 @@ namespace Cthangover.FFBattle.UI
         }
 
         /// <summary>
-        /// Single refresh entry point for all mutable character state: HP bar and
-        /// numbers with threshold colours, action point pips, shield chip, attack
-        /// caption and the stun badge with its remaining turns. Called by battle
-        /// code and by animations after each resolved action.
+        /// Single refresh entry point for all mutable character state: layered
+        /// HP/defence bar and numbers with threshold colours, action point pips,
+        /// shield chip, attack caption and the stun badge with its remaining
+        /// turns. Called by battle code and by animations after each resolved
+        /// action.
         /// </summary>
         public void UpdateInfo()
         {
-            if (Card?.Attributes == null)
+            // A lethal hit frees the widget through the death animation while
+            // the attack animation and Health.OnChange subscribers still hold it.
+            if (!IsInstanceValid(this) || IsQueuedForDeletion() || Card?.Attributes == null)
                 return;
 
             var health = Card.Attributes.Health;
             var percent = Mathf.Clamp(health.Percent, 0f, 1f);
+            var defence = Card.Attributes.Defence?.Value ?? 0;
             var fillColor = percent > 0.5f ? UiTokens.HpOk : percent > 0.25f ? UiTokens.Warning : UiTokens.HpLow;
             var textColor = percent > 0.5f ? UiTokens.HpText : percent > 0.25f ? UiTokens.Warning : UiTokens.DangerText;
 
             if (_hpBar != null)
             {
                 _hpBar.Value = percent * 100f;
-                _hpBar.AddThemeStyleboxOverride("background", UiKit.Frame(UiTokens.RadiusSm, UiTokens.LineDisabled));
                 _hpBar.AddThemeStyleboxOverride("fill", UiKit.Frame(UiTokens.RadiusSm, fillColor));
             }
+
+            // Blue defence segment on top of the health fill; collapses onto
+            // the health edge when the shield is gone.
+            UiKit.UpdateShieldedHealthBar(_shieldBar, percent, defence, health.BaseValue);
 
             if (_hpNumLabel != null)
             {
@@ -151,7 +166,6 @@ namespace Cthangover.FFBattle.UI
 
             if (_shieldChip != null)
             {
-                var defence = Card.Attributes.Defence?.Value ?? 0;
                 _shieldChip.Visible = defence > 0;
                 if (_shieldValue != null)
                     _shieldValue.Text = defence.ToString();
@@ -258,6 +272,7 @@ namespace Cthangover.FFBattle.UI
             tween.SetParallel(true);
             tween.TweenProperty(this, "modulate:a", 0f, duration * 0.5f);
             tween.TweenProperty(this, "scale", BaseScale * new Vector2(0.1f, 1.2f), duration);
+            tween.TweenProperty(_shieldBar, "modulate:a", 0f, duration);
             tween.TweenProperty(_hpBar, "modulate:a", 0f, duration);
             tween.TweenProperty(_hpNumLabel, "modulate:a", 0f, duration);
             tween.TweenProperty(_nameLabel, "modulate:a", 0f, duration);
@@ -292,10 +307,11 @@ namespace Cthangover.FFBattle.UI
             _atkLabel.AddThemeColorOverride("font_color", UiTokens.Muted);
             _teamDot.AddThemeStyleboxOverride("panel", UiKit.Frame(4, UiTokens.Danger));
 
-            var hpBackground = UiKit.Frame(UiTokens.RadiusSm, UiTokens.LineDisabled);
             var hpFill = UiKit.Frame(UiTokens.RadiusSm, UiTokens.HpOk);
-            _hpBar.AddThemeStyleboxOverride("background", hpBackground);
             _hpBar.AddThemeStyleboxOverride("fill", hpFill);
+            // Layered pie: the shield bar owns the track and the blue defence
+            // fill; the health bar paints only its fill on top of it.
+            UiKit.StyleShieldedHealthBar(_shieldBar, _hpBar);
 
             var shieldStyle = UiKit.Frame(UiTokens.RadiusXs, UiTokens.StatBg, UiTokens.StatLine);
             shieldStyle.ContentMarginLeft = 7;

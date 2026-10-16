@@ -5,6 +5,8 @@ using Cthangover.Core.UI.CharacterPanel;
 using Cthangover.Core.UI.Theming;
 using Godot;
 
+using Cthangover.Mods.Interface.Base.Lists;
+using Cthangover.Mods.Interface.Theming;
 namespace Cthangover.FFBattle.UI
 {
     /// <summary>
@@ -30,6 +32,7 @@ namespace Cthangover.FFBattle.UI
         private PanelContainer _note;
         private Label _noteLabel;
 
+        /// <summary>Builds the action detail passport panel (description plate shown when an action is inspected).</summary>
         protected override void Construct()
         {
             CthangoverTheme.Apply(this);

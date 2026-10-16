@@ -49,8 +49,16 @@ namespace Cthangover.FFBattle.Actions
         {
             if (Source == null || Target == null || Action == null)
                 return true;
+            // The target's death animation may free its widget mid-animation;
+            // finish early and let DoEnd snap the source back.
+            if (!IsAlive(Source) || !IsAlive(Target))
+                return true;
             return DoInternalAction();
         }
+
+        /// <summary>True while the widget is still in the tree and not queued for deletion.</summary>
+        protected static bool IsAlive(FFCharacterWidget widget)
+            => GodotObject.IsInstanceValid(widget) && !widget.IsQueuedForDeletion();
 
         /// <summary>Captures the initial world positions of source and target, then delegates to subclass setup.</summary>
         public void DoStart()
@@ -71,8 +79,11 @@ namespace Cthangover.FFBattle.Actions
             DoInternalEnd();
         }
 
+        /// <summary>Frame tick of the animation; implementors advance phases and return true when finished.</summary>
         protected abstract bool DoInternalAction();
+        /// <summary>Phase setup called once by <see cref="DoStart"/> after positions are captured.</summary>
         protected abstract void DoInternalStart();
+        /// <summary>Cleanup called once by <see cref="DoEnd"/> — restore captured positions here.</summary>
         protected abstract void DoInternalEnd();
 
         /// <summary>Quadratic ease-out: fast start, decelerating to the target. Used for return-to-start motion.</summary>

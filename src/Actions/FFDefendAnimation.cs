@@ -1,4 +1,4 @@
-﻿using Cthangover.Core.Battle;
+using Cthangover.Core.Battle;
 using Cthangover.Core.Battle.Actions;
 using Cthangover.Core.Characters;
 using Cthangover.TurnBattle;
@@ -30,17 +30,19 @@ namespace Cthangover.FFBattle.Actions
         public FFDefendAnimation(FFCharacterWidget source, FFCharacterWidget target, ActionCharacter action, float speed = 1f)
             : base(source, target, action, speed) { }
 
+        /// <summary>Starts the defend sequence from the bounce phase and captures the glow state.</summary>
         protected override void DoInternalStart()
         {
-            Timestamp = Time.GetTicksUsec() / 1_000_000.0;
+            Timestamp = Godot.Time.GetTicksUsec() / 1_000_000.0;
             _effectApplied = false;
             _phase = Phase.Bounce;
             _bounceOffset = new Vector2(0, -12f);
         }
 
+        /// <summary>Advances bounce → glow (defence application with a green flash) → settle.</summary>
         protected override bool DoInternalAction()
         {
-            var elapsed = (float)(Time.GetTicksUsec() / 1_000_000.0 - Timestamp) * Speed * (float)Engine.TimeScale;
+            var elapsed = (float)(Godot.Time.GetTicksUsec() / 1_000_000.0 - Timestamp) * Speed * (float)Godot.Engine.TimeScale;
 
             switch (_phase)
             {
@@ -53,7 +55,7 @@ namespace Cthangover.FFBattle.Actions
                     if (progress >= 1f)
                     {
                         _phase = Phase.Glow;
-                        Timestamp = Time.GetTicksUsec() / 1_000_000.0;
+                        Timestamp = Godot.Time.GetTicksUsec() / 1_000_000.0;
                     }
                     break;
                 }
@@ -84,7 +86,7 @@ namespace Cthangover.FFBattle.Actions
                     if (progress >= 1f)
                     {
                         _phase = Phase.Recover;
-                        Timestamp = Time.GetTicksUsec() / 1_000_000.0;
+                        Timestamp = Godot.Time.GetTicksUsec() / 1_000_000.0;
                     }
                     break;
                 }
@@ -106,9 +108,11 @@ namespace Cthangover.FFBattle.Actions
             return false;
         }
 
+        /// <summary>Returns the defender to its original position and refreshes both widgets.</summary>
         protected override void DoInternalEnd()
         {
-            Source.GlobalPosition = SourcePos;
+            if (IsAlive(Source))
+                Source.GlobalPosition = SourcePos;
             Source.UpdateInfo();
             Target.UpdateInfo();
         }

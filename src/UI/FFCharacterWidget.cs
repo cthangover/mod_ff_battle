@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using Cthangover.Core.Battle;
 using Cthangover.Core.Cards.StatusEffect;
 using Cthangover.Core.Characters;
 using Cthangover.Core.Mods.Resolvers;
@@ -54,6 +56,8 @@ namespace Cthangover.FFBattle.UI
         private TextureRect _stunIcon;
         private Label _stunLabel;
         private Tween _animTween;
+        private VBoxContainer _gaugesBox;
+        private bool _gaugesSubscribed;
         private static Shader _dissolveShader;
 
         /// <summary>Whether this widget belongs to the player party (affects highlight/targeting logic).</summary>
@@ -89,6 +93,13 @@ namespace Cthangover.FFBattle.UI
             _stunLabel = GetNode<Label>("StatusBox/StunBadge/StunRow/StunLabel");
             _selection = GetNode<Panel>("Selection");
 
+            // Extra bars of other mods (mana of battle_formulas…) go under the health bar.
+            var column = GetNode<VBoxContainer>("Info/Column");
+            _gaugesBox = new VBoxContainer { Name = "Gauges", MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+            _gaugesBox.AddThemeConstantOverride("separation", 1);
+            column.AddChild(_gaugesBox);
+            column.MoveChild(_gaugesBox, GetNode<Control>("Info/Column/HpBarStack").GetIndex() + 1);
+
             ApplyStyles();
         }
 
@@ -118,6 +129,13 @@ namespace Cthangover.FFBattle.UI
                 _pipsBox.Visible = IsPlayer;
             if (_atkLabel != null)
                 _atkLabel.Visible = !IsPlayer;
+
+            if (!_gaugesSubscribed)
+            {
+                _gaugesSubscribed = true;
+                BattleUnitGauges.Changed += OnGaugesChanged;
+                TreeExiting += () => BattleUnitGauges.Changed -= OnGaugesChanged;
+            }
 
             UpdateInfo();
         }
@@ -172,6 +190,70 @@ namespace Cthangover.FFBattle.UI
             }
 
             RefreshStun();
+            RefreshGauges();
+        }
+
+        private void OnGaugesChanged(string unitId)
+        {
+            if (unitId == null || unitId == Card?.ID)
+                RefreshGauges();
+        }
+
+        /// <summary>
+        /// Draws the <see cref="BattleUnitGauges"/> of a party member, one thin bar with its label
+        /// and numbers per gauge; rows are reused by position.
+        /// </summary>
+        private void RefreshGauges()
+        {
+            if (_gaugesBox == null || !IsInstanceValid(this) || IsQueuedForDeletion())
+                return;
+            var gauges = IsPlayer && Card != null ? BattleUnitGauges.Read(Card) : new List<BattleGauge>();
+            _gaugesBox.Visible = gauges.Count > 0;
+            while (_gaugesBox.GetChildCount() > gauges.Count)
+            {
+                var extra = _gaugesBox.GetChild(_gaugesBox.GetChildCount() - 1);
+                _gaugesBox.RemoveChild(extra);
+                extra.QueueFree();
+            }
+            for (var i = 0; i < gauges.Count; i++)
+            {
+                var row = i < _gaugesBox.GetChildCount() ? (HBoxContainer)_gaugesBox.GetChild(i) : CreateGaugeRow();
+                var gauge = gauges[i];
+                row.GetNode<Label>("Key").Text = TranslationServer.Translate(gauge.Label ?? gauge.Id ?? string.Empty).ToString();
+                var bar = row.GetNode<ProgressBar>("Bar");
+                bar.Value = Mathf.Clamp(gauge.Current / (float)gauge.Max, 0f, 1f) * 100f;
+                var color = string.IsNullOrWhiteSpace(gauge.Color) ? UiTokens.Info : Color.FromString(gauge.Color, UiTokens.Info);
+                bar.AddThemeStyleboxOverride("fill", UiKit.Frame(UiTokens.RadiusSm, color));
+                row.GetNode<Label>("Value").Text = $"{gauge.Current}/{gauge.Max}";
+            }
+        }
+
+        private HBoxContainer CreateGaugeRow()
+        {
+            var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            row.AddThemeConstantOverride("separation", 4);
+            var key = new Label { Name = "Key", MouseFilter = MouseFilterEnum.Ignore };
+            key.AddThemeFontSizeOverride("font_size", UiTokens.FontTiny);
+            key.AddThemeColorOverride("font_color", UiTokens.Muted);
+            var bar = new ProgressBar
+            {
+                Name = "Bar",
+                ShowPercentage = false,
+                MaxValue = 100,
+                CustomMinimumSize = new Vector2(0, 5),
+                SizeFlagsHorizontal = SizeFlags.ExpandFill,
+                SizeFlagsVertical = SizeFlags.ShrinkCenter,
+                MouseFilter = MouseFilterEnum.Ignore,
+            };
+            bar.AddThemeStyleboxOverride("background", UiKit.Frame(UiTokens.RadiusSm, UiTokens.StatBg));
+            var value = new Label { Name = "Value", MouseFilter = MouseFilterEnum.Ignore };
+            value.AddThemeFontSizeOverride("font_size", UiTokens.FontTiny);
+            value.AddThemeColorOverride("font_color", UiTokens.Info);
+            row.AddChild(key);
+            row.AddChild(bar);
+            row.AddChild(value);
+            _gaugesBox.AddChild(row);
+            return row;
         }
 
         /// <summary>Shows a coloured selection frame over the card with a 0.15s fade.</summary>

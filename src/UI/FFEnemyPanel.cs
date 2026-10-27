@@ -31,6 +31,8 @@ namespace Cthangover.FFBattle.UI
 
         /// <summary>Raised when a widget's death animation completes and the widget is removed.</summary>
         public event System.Action<FFCharacterWidget> OnEnemyDead;
+        /// <summary>Raised at lethal damage, before any victory check can consume the loot ledger.</summary>
+        public event System.Action<FFCharacterWidget> OnEnemyDefeated;
         /// <summary>Raised when an enemy widget is clicked (used for target selection).</summary>
         public event System.Action<FFCharacterWidget> OnEnemyClicked;
 
@@ -168,6 +170,9 @@ namespace Cthangover.FFBattle.UI
                 GridLayout(true);
                 OnEnemyDead?.Invoke(widget);
             });
+            // Victory can be resolved while the dissolve is still running.
+            // Record rewards synchronously instead of waiting for its callback.
+            OnEnemyDefeated?.Invoke(widget);
         }
 
         /// <summary>Removes a widget from the panel, frees it, and re-grids the remaining widgets.</summary>

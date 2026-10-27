@@ -152,6 +152,7 @@ namespace Cthangover.FFBattle
             _playerPanel.OnWidgetClicked += OnWidgetClicked;
             _enemyPanel.OnEnemyClicked += OnEnemyClicked;
             _enemyPanel.OnEnemyDead += OnEnemyDied;
+            _enemyPanel.OnEnemyDefeated += OnEnemyDefeated;
             _menuPanel.OnItemSelected += OnMenuItemSelected;
             _menuPanel.OnSelectionChanged += OnMenuSelectionChanged;
             _menuPanel.OnCancelled += OnMenuCancel;
@@ -909,7 +910,7 @@ namespace Cthangover.FFBattle
             OnPlayerTurnEnd();
         }
 
-        private void OnEnemyDied(FFCharacterWidget widget)
+        private void OnEnemyDefeated(FFCharacterWidget widget)
         {
             var ctx = BattleSceneContext.Instance;
             if (ctx != null && widget?.Card != null)
@@ -917,7 +918,10 @@ namespace Cthangover.FFBattle
                 ctx.RecordEnemyDefeated(widget.Card);
                 ctx.NotifyCharacterDied(widget.Card);
             }
+        }
 
+        private void OnEnemyDied(FFCharacterWidget widget)
+        {
             UpdateHudCounts();
 
             if (!_enemyPanel.HasAlive())

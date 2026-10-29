@@ -1,0 +1,9 @@
+{
+  "options": [
+    {
+      "key": "battle.core",
+      "value": "ff_battle",
+      "name": "collection_settings/ff"
+    }
+  ]
+}

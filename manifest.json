@@ -1,9 +1,9 @@
 {
   "id": "ff_battle",
-  "name": "FFBattle",
+  "name": "FF Battle",
   "version": "1.0.0",
   "author": "ct",
-  "description": "Final Fantasy style battle system on top of turn_battle_base: menu-driven commands (attack/defence/item/stun), enemy and party panels, per-action animations and executors, battle HUD and log.",
+  "description": "A battle system in the style of classic console RPGs: the party, the enemies and a command menu — Attack, Items, Defend, Escape. The battle of RPG Plus.",
   "category": "gameplay",
   "sources": [
     "src/**/*.cs"

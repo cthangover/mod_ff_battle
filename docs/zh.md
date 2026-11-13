@@ -42,9 +42,9 @@ RPG Plus 的战士在村庄里遭遇一只狼：
 
 菜单里列出角色拥有的动作（参见 Characters Engine）。而以下几种基础类型由 FF Battle 自身处理：
 
-- `Attack=1.5`——攻击伤害乘以该数值；优先被目标的护盾吸收；
-- `Defence=4`——给队友加护盾；
-- `Turn=2`——眩晕相应的回合数；
+- `Attack>=0.1.0`——攻击伤害乘以该数值；优先被目标的护盾吸收；
+- `Defence>=0.1.0`——给队友加护盾；
+- `Turn>=0.1.0`——眩晕相应的回合数；
 - 使用物品。
 
 以公式书写的动作，比如 Classic RPG Rules 的 Power strike 或 Fireball，通过 Battle Formulas 生效；魔力消耗（`Cost=mp:4`）从角色的魔力中扣除。

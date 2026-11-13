@@ -42,9 +42,9 @@ The hero's attack is 12. The wolf's shield of 2 took the first 2 points and was 
 
 The menu lists the actions the character has (see Characters Engine). FF Battle itself carries out the basic kinds:
 
-- `Attack=1.5` — damage of the attack times the number, absorbed first by the target's shield;
-- `Defence=4` — a shield on an ally;
-- `Turn=2` — stun for that many turns;
+- `Attack>=0.1.0` — damage of the attack times the number, absorbed first by the target's shield;
+- `Defence>=0.1.0` — a shield on an ally;
+- `Turn>=0.1.0` — stun for that many turns;
 - item use.
 
 Actions written as formulas, such as Classic RPG Rules' Power strike or Fireball, work through Battle Formulas; mana costs (`Cost=mp:4`) are spent from the character's mana.

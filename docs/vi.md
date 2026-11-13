@@ -42,9 +42,9 @@ Sau một đòn đánh thường và đòn đáp trả của con sói:
 
 Menu liệt kê các hành động mà nhân vật có (xem Characters Engine). Còn các loại cơ bản thì FF Battle tự xử lý:
 
-- `Attack=1.5` — sát thương của đòn đánh nhân với con số; lớp khiên của mục tiêu hấp thụ trước;
-- `Defence=4` — đặt lớp khiên lên đồng đội;
-- `Turn=2` — khiến mục tiêu choáng đúng số lượt đó;
+- `Attack>=0.1.0` — sát thương của đòn đánh nhân với con số; lớp khiên của mục tiêu hấp thụ trước;
+- `Defence>=0.1.0` — đặt lớp khiên lên đồng đội;
+- `Turn>=0.1.0` — khiến mục tiêu choáng đúng số lượt đó;
 - dùng vật phẩm.
 
 Các hành động viết bằng công thức, chẳng hạn Power strike hay Fireball của Classic RPG Rules, hoạt động thông qua Battle Formulas; chi phí mana (`Cost=mp:4`) trừ vào mana của nhân vật.

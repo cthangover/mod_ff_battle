@@ -42,9 +42,9 @@ El ataque del héroe es 12. El escudo del lobo (2) absorbió los primeros 2 punt
 
 El menú enumera las acciones que tiene el personaje (véase Characters Engine). Los tipos básicos los ejecuta el propio FF Battle:
 
-- `Attack=1.5` — el daño del ataque multiplicado por el número; lo absorbe primero el escudo del objetivo;
-- `Defence=4` — un escudo sobre un aliado;
-- `Turn=2` — aturdimiento durante ese número de turnos;
+- `Attack>=0.1.0` — el daño del ataque multiplicado por el número; lo absorbe primero el escudo del objetivo;
+- `Defence>=0.1.0` — un escudo sobre un aliado;
+- `Turn>=0.1.0` — aturdimiento durante ese número de turnos;
 - el uso de objetos.
 
 Las acciones escritas como fórmulas, como el Power strike o el Fireball de Classic RPG Rules, funcionan mediante Battle Formulas; los costes de maná (`Cost=mp:4`) se pagan con el maná del personaje.

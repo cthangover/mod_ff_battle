@@ -1,12 +1,12 @@
 {
   "id": "ff_battle",
   "name": "FF Battle",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "author": "ct",
   "description": "A battle system in the style of classic console RPGs: the party, the enemies and a command menu — Attack, Items, Defend, Escape. The battle of RPG Plus.",
   "category": "gameplay",
   "sources": [
     "src/**/*.cs"
   ],
-  "depends": [ "ui_base>=1", "turn_battle_base>=1" ]
+  "depends": [ "ui_base>=0.1.0", "turn_battle_base>=0.1.0" ]
 }

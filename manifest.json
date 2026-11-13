@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "author": "ct",
   "description": "A battle system in the style of classic console RPGs: the party, the enemies and a command menu — Attack, Items, Defend, Escape. The battle of RPG Plus.",
-  "category": "gameplay",
+  "categories": ["gameplay"],
   "sources": [
     "src/**/*.cs"
   ],

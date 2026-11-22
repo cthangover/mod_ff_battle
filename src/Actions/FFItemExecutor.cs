@@ -54,8 +54,9 @@ namespace Cthangover.FFBattle.Actions
                 return false;
             }
 
+            if (!inventory.Remove(item.ID, 1))
+                return false;
             user.Attributes.Point.Value -= 1;
-            inventory.Remove(item.ID, 1);
 
             if (item.ItemAction != null)
                 item.ItemAction.UseAction(item);
